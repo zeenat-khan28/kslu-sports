@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { CheckCircle, Clock, AlertTriangle, FileText, ArrowRight } from 'lucide-react'
+import { CheckCircle, Clock, AlertTriangle, FileText, ArrowRight, Bell } from 'lucide-react'
 
 export default async function CollegeDashboardPage() {
   const supabase = await createClient()
@@ -24,7 +24,16 @@ export default async function CollegeDashboardPage() {
     .from('initial_submissions')
     .select('id, created_at')
     .eq('college_id', collegeId)
-    .single()
+    .order('submitted_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // Fetch announcements
+  const { data: announcements } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(3)
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -32,6 +41,23 @@ export default async function CollegeDashboardPage() {
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Welcome, {(collegeEmail?.colleges as any)?.name}</h1>
         <p className="text-[var(--color-muted)] mt-1">Manage your sports participation for the 2025-26 academic year.</p>
       </div>
+
+      {announcements && announcements.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-5">
+           <h2 className="font-bold flex items-center text-orange-800 mb-3 text-sm uppercase tracking-wide">
+              <Bell className="w-4 h-4 mr-2" /> Recent Announcements
+           </h2>
+           <div className="space-y-4">
+             {announcements.map(ann => (
+               <div key={ann.id} className="bg-white border border-orange-100 p-4 rounded shadow-sm">
+                 <h3 className="font-bold text-[var(--color-text)]">{ann.title}</h3>
+                 <p className="text-sm text-[var(--color-muted)] mt-1 whitespace-pre-wrap">{ann.body}</p>
+                 <p className="text-xs text-gray-400 mt-2">{new Date(ann.created_at).toLocaleString('en-IN')}</p>
+               </div>
+             ))}
+           </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
@@ -80,7 +106,7 @@ export default async function CollegeDashboardPage() {
           <div className="bg-gray-50 border-b border-[var(--color-border)] p-4 flex justify-between items-center">
             <h2 className="font-bold text-[var(--color-text)] text-lg">Phase 2: Detailed Proforma</h2>
             <span className="flex items-center text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              <Clock className="w-4 h-4 mr-1.5" /> Not Started
+              <Clock className="w-4 h-4 mr-1.5" /> Pending
             </span>
           </div>
           
@@ -106,18 +132,6 @@ export default async function CollegeDashboardPage() {
         </div>
 
       </div>
-      
-      {/* Notifications / Announcements Box */}
-      <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] shadow-sm p-6">
-        <h2 className="font-bold text-[var(--color-kslu-maroon)] text-lg mb-4 flex items-center">
-          <FileText className="w-5 h-5 mr-2" />
-          University Announcements
-        </h2>
-        <div className="text-sm text-[var(--color-muted)] text-center py-8">
-          No new announcements from the KSLU Sports Director at this time.
-        </div>
-      </div>
-
     </div>
   )
 }
