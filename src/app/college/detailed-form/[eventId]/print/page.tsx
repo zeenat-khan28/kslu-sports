@@ -71,7 +71,7 @@ export default async function PrintProformaPage({ params }: { params: { eventId:
 
   // Format dates function
   const formatDate = (dateStr: string) => {
-    if (!dateStr) return ''
+    if (!dateStr || dateStr === '1900-01-01') return ''
     try {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return dateStr

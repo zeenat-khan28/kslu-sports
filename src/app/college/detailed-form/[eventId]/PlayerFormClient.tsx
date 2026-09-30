@@ -54,11 +54,17 @@ export default function PlayerFormClient({
   
   const [players, setPlayers] = useState<PlayerData[]>(
     existingPlayers.length > 0 
-      ? existingPlayers.sort((a, b) => a.serial_no - b.serial_no) 
+      ? existingPlayers.sort((a, b) => a.serial_no - b.serial_no).map(p => ({
+          ...p,
+          date_of_birth: p.date_of_birth === '1900-01-01' ? '' : p.date_of_birth,
+          first_admission_law_university: p.first_admission_law_university === '1900-01-01' ? '' : p.first_admission_law_university,
+          first_admission_present_course: p.first_admission_present_course === '1900-01-01' ? '' : p.first_admission_present_course
+        }))
       : Array.from({ length: 4 }).map((_, i) => emptyPlayer(i + 1))
   )
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const updatePlayer = (index: number, field: keyof PlayerData, value: string) => {
     if (isLocked) return
@@ -81,6 +87,7 @@ export default function PlayerFormClient({
   const handleSave = async (isFinalSubmit: boolean = false) => {
     setSaving(true)
     setSaveStatus('idle')
+    setErrorMessage('')
 
     try {
       // 1. Create or update detailed_form
@@ -111,8 +118,21 @@ export default function PlayerFormClient({
          if (formError) throw formError
       }
 
-      // Filter out empty rows
+      // Filter out completely empty rows (if full_name is empty, consider row empty)
       const validPlayers = players.filter(p => p.full_name.trim() !== '')
+
+      // If final submit, validate required fields
+      if (isFinalSubmit) {
+        for (let i = 0; i < validPlayers.length; i++) {
+          const p = validPlayers[i]
+          if (!p.date_of_birth || !p.first_admission_law_university || !p.first_admission_present_course || !p.father_name || !p.qualifying_exam_name) {
+             throw new Error(`Row ${p.serial_no} is incomplete. All date fields, name, and exam details must be filled for Final Submit.`)
+          }
+        }
+        if (validPlayers.length === 0) {
+            throw new Error(`You must add at least 1 player to Final Submit.`)
+        }
+      }
 
       // 2. Delete existing players and re-insert
       await supabase.from('detailed_players').delete().eq('detailed_form_id', formId)
@@ -120,6 +140,9 @@ export default function PlayerFormClient({
       if (validPlayers.length > 0) {
         const payload = validPlayers.map(p => ({
           ...p,
+          date_of_birth: p.date_of_birth || '1900-01-01',
+          first_admission_law_university: p.first_admission_law_university || '1900-01-01',
+          first_admission_present_course: p.first_admission_present_course || '1900-01-01',
           detailed_form_id: formId,
           id: undefined // Let DB generate new UUIDs
         }))
@@ -135,9 +158,10 @@ export default function PlayerFormClient({
          setTimeout(() => setSaveStatus('idle'), 3000)
       }
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
       setSaveStatus('error')
+      setErrorMessage(err.message || 'An error occurred while saving.')
     } finally {
       setSaving(false)
     }
@@ -148,7 +172,7 @@ export default function PlayerFormClient({
       <div className="flex items-center justify-between bg-[var(--color-surface)] p-4 border border-[var(--color-border)] rounded-lg shadow-sm">
         <div>
           {saveStatus === 'success' && <span className="text-[var(--color-success)] font-bold text-sm">Successfully saved.</span>}
-          {saveStatus === 'error' && <span className="text-[var(--color-danger)] font-bold text-sm">Error saving data.</span>}
+          {saveStatus === 'error' && <span className="text-[var(--color-danger)] font-bold text-sm">Error: {errorMessage}</span>}
           {isLocked && <span className="text-[var(--color-warning)] font-bold text-sm">Form is finalized and locked.</span>}
         </div>
         
