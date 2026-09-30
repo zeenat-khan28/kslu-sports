@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
+@theme {
+  --color-kslu-maroon: #7B1E22;
+  --color-kslu-maroon-dark: #5A1418;
+  --color-kslu-green: #1F5C3A;
+  --color-kslu-saffron: #E08A1E;
+  --color-kslu-gold: #B8912F;
+  
+  --color-background: #FAF7F2;
+  --color-surface: #FFFFFF;
+  --color-text: #2B2B2B;
+  --color-muted: #5F5A52;
+  --color-border: #D9D2C5;
+  --color-success: #2E7D32;
+  --color-warning: #B26A00;
+  --color-danger: #B3261E;
+
+  /* Remove all blues and purples to comply with strict design rules */
+  --color-blue-50: initial;
+  --color-blue-100: initial;
+  --color-blue-200: initial;
+  --color-blue-300: initial;
+  --color-blue-400: initial;
+  --color-blue-500: initial;
+  --color-blue-600: initial;
+  --color-blue-700: initial;
+  --color-blue-800: initial;
+  --color-blue-900: initial;
+  --color-blue-950: initial;
+  
+  --color-purple-50: initial;
+  --color-purple-100: initial;
+  --color-purple-200: initial;
+  --color-purple-300: initial;
+  --color-purple-400: initial;
+  --color-purple-500: initial;
+  --color-purple-600: initial;
+  --color-purple-700: initial;
+  --color-purple-800: initial;
+  --color-purple-900: initial;
+  --color-purple-950: initial;
+
+  --color-indigo-50: initial;
+  --color-indigo-100: initial;
+  --color-indigo-200: initial;
+  --color-indigo-300: initial;
+  --color-indigo-400: initial;
+  --color-indigo-500: initial;
+  --color-indigo-600: initial;
+  --color-indigo-700: initial;
+  --color-indigo-800: initial;
+  --color-indigo-900: initial;
+  --color-indigo-950: initial;
+
+  --color-violet-50: initial;
+  --color-violet-100: initial;
+  --color-violet-200: initial;
+  --color-violet-300: initial;
+  --color-violet-400: initial;
+  --color-violet-500: initial;
+  --color-violet-600: initial;
+  --color-violet-700: initial;
+  --color-violet-800: initial;
+  --color-violet-900: initial;
+  --color-violet-950: initial;
+  
+  --color-cyan-50: initial;
+  --color-cyan-100: initial;
+  --color-cyan-200: initial;
+  --color-cyan-300: initial;
+  --color-cyan-400: initial;
+  --color-cyan-500: initial;
+  --color-cyan-600: initial;
+  --color-cyan-700: initial;
+  --color-cyan-800: initial;
+  --color-cyan-900: initial;
+  --color-cyan-950: initial;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: var(--color-background);
+  --foreground: var(--color-text);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Focus outline rule */
+*:focus-visible {
+  outline: 3px solid var(--color-kslu-saffron);
+  outline-offset: 2px;
 }
