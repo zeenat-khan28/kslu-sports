@@ -64,7 +64,9 @@ export default async function InitialFormPage() {
     .from('initial_submissions')
     .select('*')
     .eq('college_id', collegeId)
-    .single()
+    .order('submitted_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (existingSubmission && !isOpen) {
      // They submitted, and the window is closed. Just show success message.

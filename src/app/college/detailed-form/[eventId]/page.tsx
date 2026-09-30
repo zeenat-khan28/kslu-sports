@@ -1,12 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, Users } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import PlayerFormClient from './PlayerFormClient'
 
 export default async function DetailedProformaEditor({ params }: { params: { eventId: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const { data: collegeEmail } = await supabase
+    .from('college_emails')
+    .select('college_id')
+    .eq('auth_user_id', user.id)
+    .single()
+    
+  if (!collegeEmail?.college_id) redirect('/college/dashboard')
+  const collegeId = collegeEmail.college_id
 
   const { data: event } = await supabase
     .from('sport_events')
@@ -16,8 +26,29 @@ export default async function DetailedProformaEditor({ params }: { params: { eve
 
   if (!event) redirect('/college/detailed-form')
 
+  // Fetch window logic
+  const { data: window } = await supabase.from('portal_windows').select('*').eq('phase', 'detailed').single()
+  const { data: extension } = await supabase.from('college_window_extensions').select('*').eq('college_id', collegeId).eq('phase', 'detailed').single()
+  
+  const now = new Date()
+  let isOpen = false
+  if (window?.manual_override === 'force_open') isOpen = true
+  else if (window?.manual_override === 'force_close') isOpen = false
+  else if (window?.opens_at && window?.closes_at && now >= new Date(window.opens_at) && now <= new Date(window.closes_at)) isOpen = true
+  if (extension && new Date(extension.extended_until) >= now && window?.manual_override !== 'force_close') isOpen = true
+
+  // Fetch existing form and players
+  const { data: form } = await supabase.from('detailed_forms').select('*').eq('sport_event_id', event.id).eq('college_id', collegeId).single()
+  let players = []
+  if (form) {
+     const { data: pData } = await supabase.from('detailed_players').select('*').eq('detailed_form_id', form.id).order('serial_no')
+     players = pData || []
+  }
+
+  const isLocked = !isOpen || form?.status === 'submitted'
+
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="max-w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <Link href="/college/detailed-form" className="inline-flex items-center text-sm font-bold text-[var(--color-muted)] hover:text-[var(--color-kslu-maroon)] mb-2">
@@ -26,26 +57,17 @@ export default async function DetailedProformaEditor({ params }: { params: { eve
           <h1 className="text-2xl font-bold text-[var(--color-text)]">
             {event.sports.name} ({event.gender})
           </h1>
-          <p className="text-[var(--color-muted)] mt-1">Maximum 12 players allowed.</p>
-        </div>
-        
-        <div className="flex space-x-3">
-          <button className="px-4 py-2 border border-[var(--color-border)] rounded bg-white font-bold text-[var(--color-text)] flex items-center hover:bg-gray-50">
-            <Save className="w-4 h-4 mr-2" /> Save Draft
-          </button>
-          <button className="px-4 py-2 bg-[var(--color-kslu-green)] text-white rounded font-bold flex items-center hover:bg-[#164229]">
-            <Upload className="w-4 h-4 mr-2" /> Final Submit
-          </button>
+          <p className="text-[var(--color-muted)] mt-1">Fill in the eligibility proforma. Maximum 12 players.</p>
         </div>
       </div>
 
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-sm p-8 text-center">
-         <Users className="w-12 h-12 text-[var(--color-muted)] mx-auto mb-4" />
-         <h2 className="text-xl font-bold text-[var(--color-text)]">Player Entry Interface Coming Soon</h2>
-         <p className="text-[var(--color-muted)] mt-2 max-w-lg mx-auto">
-           The detailed player entry form (including photo uploads, academic details, and PDF generation) is currently being finalized for Milestone 6.
-         </p>
-      </div>
+      <PlayerFormClient 
+         eventId={event.id}
+         collegeId={collegeId}
+         existingForm={form}
+         existingPlayers={players}
+         isLocked={isLocked}
+      />
     </div>
   )
 }

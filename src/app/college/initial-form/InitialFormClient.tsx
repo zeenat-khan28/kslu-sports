@@ -57,7 +57,11 @@ export default function InitialFormClient({ sports, existingResponses, collegeId
       if (isFinalSubmit) {
         const { error: submitError } = await supabase
           .from('initial_submissions')
-          .upsert({ college_id: collegeId }, { onConflict: 'college_id' })
+          .insert({ 
+            college_id: collegeId,
+            version: 1,
+            snapshot: Object.fromEntries(responses)
+          })
           
         if (submitError) throw submitError
         
