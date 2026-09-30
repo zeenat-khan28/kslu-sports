@@ -22,7 +22,7 @@ export default async function CollegeDashboardPage() {
   // Check if Initial Form is submitted
   const { data: initialSubmission } = await supabase
     .from('initial_submissions')
-    .select('id, created_at')
+    .select('id, submitted_at')
     .eq('college_id', collegeId)
     .order('submitted_at', { ascending: false })
     .limit(1)
@@ -83,7 +83,7 @@ export default async function CollegeDashboardPage() {
             
             {initialSubmission ? (
               <div className="space-y-4">
-                <p className="text-sm"><strong>Submitted on:</strong> {new Date(initialSubmission.created_at).toLocaleString('en-IN')}</p>
+                <p className="text-sm"><strong>Submitted on:</strong> {new Date(initialSubmission.submitted_at).toLocaleString('en-IN')}</p>
                 <Link href="/college/initial-form" className="inline-flex items-center text-sm font-bold text-[var(--color-kslu-maroon)] hover:underline">
                   View your submission <ArrowRight className="w-4 h-4 ml-1" />
                 </Link>
