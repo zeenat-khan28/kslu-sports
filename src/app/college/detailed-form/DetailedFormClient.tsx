@@ -60,9 +60,9 @@ export default function DetailedFormClient({ confirmedEvents, existingForms, col
                     </td>
                     <td className="p-4 text-right">
                       {form?.status === 'submitted' ? (
-                         <button className="inline-flex items-center text-sm font-bold text-[var(--color-kslu-green)] hover:underline">
+                         <Link href={`/college/detailed-form/${event.id}/print`} target="_blank" className="inline-flex items-center text-sm font-bold text-[var(--color-kslu-green)] hover:underline">
                            <Printer className="w-4 h-4 mr-1" /> Print PDF
-                         </button>
+                         </Link>
                       ) : (
                         <Link 
                           href={`/college/detailed-form/${event.id}`}

@@ -1,15 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import PlayerFormClient from './PlayerFormClient'
+import { createClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DetailedProformaEditor({ params }: { params: { eventId: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: collegeEmail } = await supabase
+  const adminDb = createAdminClient()
+
+  const { data: collegeEmail } = await adminDb
     .from('college_emails')
     .select('college_id')
     .eq('auth_user_id', user.id)
@@ -18,17 +23,17 @@ export default async function DetailedProformaEditor({ params }: { params: { eve
   if (!collegeEmail?.college_id) redirect('/college/dashboard')
   const collegeId = collegeEmail.college_id
 
-  const { data: event } = await supabase
+  const { data: event } = await adminDb
     .from('sport_events')
     .select('*, sports(*)')
     .eq('id', params.eventId)
-    .single()
+    .maybeSingle()
 
   if (!event) redirect('/college/detailed-form')
 
   // Fetch window logic
-  const { data: window } = await supabase.from('portal_windows').select('*').eq('phase', 'detailed').single()
-  const { data: extension } = await supabase.from('college_window_extensions').select('*').eq('college_id', collegeId).eq('phase', 'detailed').single()
+  const { data: window } = await adminDb.from('portal_windows').select('*').eq('phase', 'detailed').maybeSingle()
+  const { data: extension } = await adminDb.from('college_window_extensions').select('*').eq('college_id', collegeId).eq('phase', 'detailed').maybeSingle()
   
   const now = new Date()
   let isOpen = false
@@ -38,10 +43,10 @@ export default async function DetailedProformaEditor({ params }: { params: { eve
   if (extension && new Date(extension.extended_until) >= now && window?.manual_override !== 'force_close') isOpen = true
 
   // Fetch existing form and players
-  const { data: form } = await supabase.from('detailed_forms').select('*').eq('sport_event_id', event.id).eq('college_id', collegeId).single()
-  let players = []
+  const { data: form } = await adminDb.from('detailed_forms').select('*').eq('sport_event_id', event.id).eq('college_id', collegeId).maybeSingle()
+  let players: any[] = []
   if (form) {
-     const { data: pData } = await supabase.from('detailed_players').select('*').eq('detailed_form_id', form.id).order('serial_no')
+     const { data: pData } = await adminDb.from('detailed_players').select('*').eq('detailed_form_id', form.id).order('serial_no')
      players = pData || []
   }
 
