@@ -46,9 +46,15 @@ export default function VenueManager({ initialData }: VenueManagerProps) {
       const venuesToUpsert = sport.events
         .filter((ev: any) => ev.venue)
         .map((ev: any) => ({
-          ...ev.venue,
-          // If no status is set, default to TBA
-          status: ev.venue.status || 'tba'
+          sport_event_id: ev.id,
+          venue_text: ev.venue.venue_text || null,
+          location: ev.venue.location || null,
+          start_date: ev.venue.start_date || null,
+          end_date: ev.venue.end_date || null,
+          status: ev.venue.status || 'tba',
+          contact_name: ev.venue.contact_name || null,
+          contact_phone: ev.venue.contact_phone || null,
+          remarks: ev.venue.remarks || null,
         }))
 
       if (venuesToUpsert.length === 0) {
