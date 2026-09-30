@@ -17,17 +17,11 @@ export default function ActivatePage() {
     setLoading(true)
 
     try {
-      // In a real application, you might want to call a secure server action 
-      // here to verify if the email exists in college_emails first, 
-      // but calling resetPasswordForEmail directly handles the "neutral response" 
-      // requirement out of the box if Supabase is configured securely.
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/set-password`,
+      await fetch('/api/auth/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
-
-      // We ignore the error explicitly to prevent email enumeration,
-      // as requested in the requirements.
     } catch (err) {
       // Silently catch
     } finally {
