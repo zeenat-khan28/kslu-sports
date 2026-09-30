@@ -10,11 +10,32 @@ export const metadata: Metadata = {
   description: 'Official sports portal for Karnataka State Law University',
 }
 
-export default function RootLayout({
+import { createClient } from '@/lib/supabase/server'
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  let navLabel = ''
+  let navLink = '/login'
+  let isAdmin = false
+  
+  if (user) {
+     const { data: admin } = await supabase.from('admins').select('id').eq('auth_user_id', user.id).single()
+     if (admin) {
+        isAdmin = true
+        navLink = '/admin/dashboard'
+        navLabel = 'Admin Dashboard'
+     } else {
+        const { data: collegeEmail } = await supabase.from('college_emails').select('colleges(name)').eq('auth_user_id', user.id).single()
+        navLabel = (collegeEmail?.colleges as any)?.name || 'College Dashboard'
+        navLink = '/college/dashboard'
+     }
+  }
   return (
     <html lang="en">
       <body className={`${inter.className} min-h-screen flex flex-col bg-[var(--color-background)]`}>
@@ -91,9 +112,16 @@ export default function RootLayout({
                 </Link>
               </li>
               <li className="ml-auto !ml-auto flex space-x-4">
-                <Link href="/login" className="inline-block py-2 px-4 mt-1 bg-white/10 hover:bg-white/20 rounded font-bold transition-colors no-underline">
-                  College Login
-                </Link>
+                {user ? (
+                  <Link href={navLink} className="inline-block py-1.5 px-4 mt-1 bg-white/10 hover:bg-white/20 rounded font-bold transition-colors no-underline flex flex-col items-start leading-tight max-w-[250px] truncate" title={navLabel}>
+                    {!isAdmin && <span className="text-[10px] text-[var(--color-kslu-saffron)] font-bold uppercase tracking-wider">Welcome</span>}
+                    <span className="truncate w-full">{navLabel}</span>
+                  </Link>
+                ) : (
+                  <Link href="/login" className="inline-block py-2 px-4 mt-1 bg-white/10 hover:bg-white/20 rounded font-bold transition-colors no-underline">
+                    College Login
+                  </Link>
+                )}
               </li>
             </ul>
           </div>
