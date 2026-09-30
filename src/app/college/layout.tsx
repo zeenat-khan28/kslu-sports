@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { LayoutDashboard, FileText, CheckSquare, LogOut } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
 export default async function CollegeLayout({
   children,
 }: {

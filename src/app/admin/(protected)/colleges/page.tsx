@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Building2, Plus, Trash2 } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminCollegesPage() {
   const supabase = await createClient()
 
