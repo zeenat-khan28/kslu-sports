@@ -1,14 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import InitialFormClient from './InitialFormClient'
 import { redirect } from 'next/navigation'
-import { AlertTriangle, Clock } from 'lucide-react'
+import { AlertTriangle, Clock, CheckCircle } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default async function InitialFormPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: collegeEmail } = await supabase
+  // Use service role to reliably read data
+  const adminDb = createAdminClient()
+
+  const { data: collegeEmail } = await adminDb
     .from('college_emails')
     .select('college_id')
     .eq('auth_user_id', user.id)
@@ -18,18 +24,18 @@ export default async function InitialFormPage() {
   const collegeId = collegeEmail.college_id
 
   // 1. Check window status
-  const { data: window } = await supabase
+  const { data: window } = await adminDb
     .from('portal_windows')
     .select('*')
     .eq('phase', 'initial')
-    .single()
+    .maybeSingle()
 
-  const { data: extension } = await supabase
+  const { data: extension } = await adminDb
     .from('college_window_extensions')
     .select('*')
     .eq('college_id', collegeId)
     .eq('phase', 'initial')
-    .single()
+    .maybeSingle()
 
   const now = new Date()
   let isOpen = false
@@ -60,7 +66,7 @@ export default async function InitialFormPage() {
   }
 
   // 2. Has the user already submitted?
-  const { data: existingSubmission } = await supabase
+  const { data: existingSubmission } = await adminDb
     .from('initial_submissions')
     .select('*')
     .eq('college_id', collegeId)
@@ -68,23 +74,47 @@ export default async function InitialFormPage() {
     .limit(1)
     .maybeSingle()
 
-  if (existingSubmission && !isOpen) {
-     // They submitted, and the window is closed. Just show success message.
-     return (
-        <div className="max-w-4xl space-y-6">
+  // If submitted, show read-only view with success message
+  if (existingSubmission) {
+    // Fetch sports and existing responses for read-only display
+    const { data: sports } = await adminDb.from('sports').select('*').eq('is_active', true).order('display_order')
+    const { data: sportEvents } = await adminDb.from('sport_events').select('*').eq('is_active', true).order('display_order')
+    const { data: existingResponses } = await adminDb.from('initial_responses').select('*').eq('college_id', collegeId)
+
+    const sportsWithEvents = sports?.map(sport => ({
+      ...sport,
+      events: sportEvents?.filter(e => e.sport_id === sport.id) || []
+    })) || []
+
+    return (
+      <div className="max-w-4xl space-y-6">
+        <div>
           <h1 className="text-2xl font-bold text-[var(--color-text)]">Initial Confirmation</h1>
-          <div className="p-6 bg-gray-50 border border-[var(--color-border)] rounded-md text-center">
-            <h2 className="text-lg font-bold text-[var(--color-success)] mb-2">Form Submitted Successfully</h2>
-            <p className="text-[var(--color-muted)] text-sm">
-              You submitted your initial confirmation on {new Date(existingSubmission.created_at).toLocaleString('en-IN')}.
-              The portal is now closed for editing.
-            </p>
-          </div>
+          <p className="text-[var(--color-muted)] mt-1">Your submission is locked and cannot be edited.</p>
         </div>
-     )
+
+        <div className="p-4 bg-green-50 border border-green-200 rounded-md flex items-start text-green-800 text-sm">
+          <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+          <span>
+            <strong>Submitted successfully</strong> on {new Date(existingSubmission.submitted_at).toLocaleString('en-IN')}.
+            This form is now locked. Contact the administrator if you need changes.
+          </span>
+        </div>
+
+        <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] shadow-sm">
+          <InitialFormClient 
+            sports={sportsWithEvents} 
+            existingResponses={existingResponses || []} 
+            collegeId={collegeId}
+            isLocked={true}
+            hasSubmitted={true}
+          />
+        </div>
+      </div>
+    )
   }
 
-  if (!isOpen && !existingSubmission) {
+  if (!isOpen) {
     return (
       <div className="max-w-4xl space-y-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Initial Confirmation</h1>
@@ -100,9 +130,9 @@ export default async function InitialFormPage() {
   }
 
   // 3. Fetch Sports and existing responses
-  const { data: sports } = await supabase.from('sports').select('*').eq('is_active', true).order('display_order')
-  const { data: sportEvents } = await supabase.from('sport_events').select('*').eq('is_active', true).order('display_order')
-  const { data: existingResponses } = await supabase.from('initial_responses').select('*').eq('college_id', collegeId)
+  const { data: sports } = await adminDb.from('sports').select('*').eq('is_active', true).order('display_order')
+  const { data: sportEvents } = await adminDb.from('sport_events').select('*').eq('is_active', true).order('display_order')
+  const { data: existingResponses } = await adminDb.from('initial_responses').select('*').eq('college_id', collegeId)
 
   const sportsWithEvents = sports?.map(sport => ({
     ...sport,
@@ -116,20 +146,13 @@ export default async function InitialFormPage() {
         <p className="text-[var(--color-muted)] mt-1">Please confirm Yes or No for your college's participation in each event.</p>
       </div>
 
-      {!isOpen && existingSubmission && (
-         <div className="p-4 bg-orange-50 border border-orange-200 rounded-md flex items-start text-orange-800 text-sm">
-            <Clock className="w-5 h-5 mr-2 flex-shrink-0" />
-            <span>The portal is technically closed, but you are viewing your locked submission.</span>
-         </div>
-      )}
-
       <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] shadow-sm">
         <InitialFormClient 
           sports={sportsWithEvents} 
           existingResponses={existingResponses || []} 
           collegeId={collegeId}
-          isLocked={!!existingSubmission}
-          hasSubmitted={!!existingSubmission}
+          isLocked={false}
+          hasSubmitted={false}
         />
       </div>
     </div>

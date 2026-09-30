@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { LayoutDashboard, FileText, CheckSquare, LogOut } from 'lucide-react'
 
@@ -18,8 +19,9 @@ export default async function CollegeLayout({
     redirect('/login')
   }
 
-  // Fetch college details
-  const { data: collegeEmail } = await supabase
+  // Use service role to reliably fetch college details
+  const adminDb = createAdminClient()
+  const { data: collegeEmail } = await adminDb
     .from('college_emails')
     .select('college_id, colleges(*)')
     .eq('auth_user_id', user.id)

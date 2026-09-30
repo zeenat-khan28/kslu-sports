@@ -1,12 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { CheckCircle, Clock, AlertTriangle, FileText, ArrowRight, Bell } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default async function CollegeDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: collegeEmail } = await supabase
+  // Use service role to reliably read data
+  const adminDb = createAdminClient()
+
+  const { data: collegeEmail } = await adminDb
     .from('college_emails')
     .select('college_id, colleges(*)')
     .eq('auth_user_id', user?.id)
@@ -15,12 +21,12 @@ export default async function CollegeDashboardPage() {
   const collegeId = collegeEmail?.college_id
 
   // Fetch window status
-  const { data: windows } = await supabase.from('portal_windows').select('*')
+  const { data: windows } = await adminDb.from('portal_windows').select('*')
   const initialWindow = windows?.find(w => w.phase === 'initial')
   const detailedWindow = windows?.find(w => w.phase === 'detailed')
 
   // Check if Initial Form is submitted
-  const { data: initialSubmission } = await supabase
+  const { data: initialSubmission } = await adminDb
     .from('initial_submissions')
     .select('id, submitted_at')
     .eq('college_id', collegeId)
@@ -28,12 +34,13 @@ export default async function CollegeDashboardPage() {
     .limit(1)
     .maybeSingle()
 
-  // Fetch announcements
-  const { data: announcements } = await supabase
+  // Fetch announcements (public + all_colleges)
+  const { data: announcements } = await adminDb
     .from('notifications')
     .select('*')
+    .in('audience', ['public', 'all_colleges'])
     .order('created_at', { ascending: false })
-    .limit(3)
+    .limit(5)
 
   return (
     <div className="space-y-8 max-w-5xl">

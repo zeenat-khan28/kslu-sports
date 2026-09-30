@@ -1,8 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import WindowManager from './WindowManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminWindowsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: windows } = await supabase
     .from('portal_windows')

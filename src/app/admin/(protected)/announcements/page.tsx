@@ -1,9 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Bell, Megaphone, Plus, Trash2 } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminAnnouncementsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch announcements
   const { data: announcements } = await supabase
@@ -17,8 +19,8 @@ export default async function AdminAnnouncementsPage() {
     const title = formData.get('title') as string
     const body = formData.get('body') as string
     
-    const supabase = await createClient()
-    await supabase.from('notifications').insert({
+    const adminDb = createAdminClient()
+    await adminDb.from('notifications').insert({
       title,
       body,
       type: 'manual',
@@ -32,8 +34,8 @@ export default async function AdminAnnouncementsPage() {
     'use server'
     const id = formData.get('id') as string
     
-    const supabase = await createClient()
-    await supabase.from('notifications').delete().eq('id', id)
+    const adminDb = createAdminClient()
+    await adminDb.from('notifications').delete().eq('id', id)
     revalidatePath('/admin/announcements')
   }
 

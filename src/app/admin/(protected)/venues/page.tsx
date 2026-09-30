@@ -1,8 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import VenueManager from './VenueManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminVenuesPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch all active sports
   const { data: sports } = await supabase

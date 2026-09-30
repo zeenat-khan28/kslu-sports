@@ -1,27 +1,40 @@
 import { createClient } from '@/lib/supabase/server'
-import { Building2, Plus, Trash2 } from 'lucide-react'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { Building2, Plus, Trash2, Pencil } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminCollegesPage() {
+  // Verify user is admin via cookie-based auth
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+
+  // Use service role client to bypass RLS for data fetching
+  const adminDb = createAdminClient()
 
   // Fetch all colleges and their primary email
-  const { data: colleges } = await supabase
+  const { data: colleges, error } = await adminDb
     .from('colleges')
     .select(`
       id, 
       name, 
-      zone, 
       code,
+      status,
+      is_active,
       college_emails (
         id,
-        email
+        email,
+        is_primary
       )
     `)
-    .eq('is_active', true)
     .order('name')
+
+  if (error) {
+    console.error('Error fetching colleges:', error)
+  }
 
   async function addCollege(formData: FormData) {
     'use server'
@@ -29,28 +42,29 @@ export default async function AdminCollegesPage() {
     const name = formData.get('name') as string
     const email = formData.get('email') as string
     
-    const supabase = await createClient()
+    const adminDb = createAdminClient()
 
     // Insert college
-    const { data: college, error: collegeError } = await supabase
+    const { data: college, error: collegeError } = await adminDb
       .from('colleges')
-      .insert({ code, name, is_active: true })
+      .insert({ code, name, is_active: true, status: 'active' })
       .select('id')
       .single()
 
     if (collegeError || !college) {
-      console.error(collegeError)
+      console.error('Error adding college:', collegeError)
       return
     }
 
     // Insert email
     if (email) {
-      await supabase.from('college_emails').insert({
+      const { error: emailError } = await adminDb.from('college_emails').insert({
         college_id: college.id,
         email: email.toLowerCase(),
         is_primary: true,
         is_active: true
       })
+      if (emailError) console.error('Error adding email:', emailError)
     }
     
     revalidatePath('/admin/colleges')
@@ -60,8 +74,9 @@ export default async function AdminCollegesPage() {
     'use server'
     const id = formData.get('id') as string
     
-    const supabase = await createClient()
-    await supabase.from('colleges').delete().eq('id', id)
+    const adminDb = createAdminClient()
+    const { error } = await adminDb.from('colleges').delete().eq('id', id)
+    if (error) console.error('Error deleting college:', error)
     revalidatePath('/admin/colleges')
   }
 
@@ -103,34 +118,56 @@ export default async function AdminCollegesPage() {
               {colleges?.length || 0} Registered Colleges
            </h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-sm border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-gray-100 border-b border-[var(--color-border)]">
-                <th className="p-4 font-bold text-[var(--color-text)] w-16">Code</th>
-                <th className="p-4 font-bold text-[var(--color-text)]">College Name</th>
-                <th className="p-4 font-bold text-[var(--color-text)]">Primary Email</th>
-                <th className="p-4 font-bold text-[var(--color-text)] text-right">Actions</th>
+                <th className="p-3 font-bold text-[var(--color-text)] w-20">#</th>
+                <th className="p-3 font-bold text-[var(--color-text)] w-20">Code</th>
+                <th className="p-3 font-bold text-[var(--color-text)]">College Name</th>
+                <th className="p-3 font-bold text-[var(--color-text)]">Primary Email</th>
+                <th className="p-3 font-bold text-[var(--color-text)] w-20">Status</th>
+                <th className="p-3 font-bold text-[var(--color-text)] text-right w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {colleges?.map(college => (
-                <tr key={college.id} className="border-b border-[var(--color-border)] hover:bg-gray-50/50">
-                  <td className="p-4 font-medium text-[var(--color-muted)]">{college.code || '-'}</td>
-                  <td className="p-4 font-medium text-[var(--color-text)] max-w-md truncate" title={college.name}>{college.name}</td>
-                  <td className="p-4 text-[var(--color-muted)]">
-                    {college.college_emails?.[0]?.email || <span className="text-[var(--color-warning)] italic">No email</span>}
-                  </td>
-                  <td className="p-4 text-right">
-                    <form action={deleteCollege}>
-                      <input type="hidden" name="id" value={college.id} />
-                      <button type="submit" className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded" title="Delete College">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </form>
+              {colleges && colleges.length > 0 ? (
+                colleges.map((college, idx) => (
+                  <tr key={college.id} className="border-b border-[var(--color-border)] hover:bg-gray-50/50">
+                    <td className="p-3 text-xs text-[var(--color-muted)]">{idx + 1}</td>
+                    <td className="p-3 font-medium text-[var(--color-muted)]">{college.code || '-'}</td>
+                    <td className="p-3 font-medium text-[var(--color-text)]" title={college.name}>
+                      <span className="block max-w-md truncate">{college.name}</span>
+                    </td>
+                    <td className="p-3 text-[var(--color-muted)] text-xs">
+                      {(college.college_emails as any)?.[0]?.email || <span className="text-[var(--color-warning)] italic">No email</span>}
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        college.is_active 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {college.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <form action={deleteCollege} className="inline">
+                        <input type="hidden" name="id" value={college.id} />
+                        <button type="submit" className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded" title="Delete College">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-[var(--color-muted)]">
+                    {error ? `Error loading colleges: ${error.message}` : 'No colleges found. Add one above.'}
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

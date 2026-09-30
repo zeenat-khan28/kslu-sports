@@ -1,8 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Activity } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminSportsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: sports } = await supabase
     .from('sports')

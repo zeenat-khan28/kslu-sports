@@ -1,8 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CheckCircle2, Clock } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ParticipationTrackerPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch all active colleges
   const { data: colleges } = await supabase

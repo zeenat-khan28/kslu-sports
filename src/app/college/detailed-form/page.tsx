@@ -1,14 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import DetailedFormClient from './DetailedFormClient'
 import { redirect } from 'next/navigation'
 import { AlertTriangle, Clock } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DetailedFormPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: collegeEmail } = await supabase
+  // Use service role to reliably read data (RLS was silently failing on Vercel)
+  const adminDb = createAdminClient()
+
+  const { data: collegeEmail } = await adminDb
     .from('college_emails')
     .select('college_id')
     .eq('auth_user_id', user.id)
@@ -18,7 +24,7 @@ export default async function DetailedFormPage() {
   const collegeId = collegeEmail.college_id
 
   // 1. Check if Phase 1 is submitted
-  const { data: initialSubmission } = await supabase
+  const { data: initialSubmission } = await adminDb
     .from('initial_submissions')
     .select('*')
     .eq('college_id', collegeId)
@@ -42,18 +48,18 @@ export default async function DetailedFormPage() {
   }
 
   // 2. Check window status
-  const { data: window } = await supabase
+  const { data: window } = await adminDb
     .from('portal_windows')
     .select('*')
     .eq('phase', 'detailed')
-    .single()
+    .maybeSingle()
 
-  const { data: extension } = await supabase
+  const { data: extension } = await adminDb
     .from('college_window_extensions')
     .select('*')
     .eq('college_id', collegeId)
     .eq('phase', 'detailed')
-    .single()
+    .maybeSingle()
 
   const now = new Date()
   let isOpen = false
@@ -84,14 +90,14 @@ export default async function DetailedFormPage() {
   }
 
   // 3. Fetch Confirmed Sports (where participating = true)
-  const { data: confirmedEvents } = await supabase
+  const { data: confirmedEvents } = await adminDb
     .from('initial_responses')
     .select('sport_event_id, sport_events(*, sports(*))')
     .eq('college_id', collegeId)
     .eq('participating', true)
 
   // 4. Fetch existing detailed forms
-  const { data: detailedForms } = await supabase
+  const { data: detailedForms } = await adminDb
     .from('detailed_forms')
     .select('*')
     .eq('college_id', collegeId)

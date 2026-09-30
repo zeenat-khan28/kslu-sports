@@ -1,9 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Building2, FileCheck, Users, AlertCircle, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   
   // 1. Fetch high-level stats
   const { count: totalColleges } = await supabase
