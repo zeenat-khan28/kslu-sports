@@ -5,9 +5,9 @@ import dotenv from 'dotenv'
 // Load environment variables from .env.local
 dotenv.config({ path: '.env.local' })
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const adminEmail = process.env.ADMIN_SEED_EMAIL
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string
+const adminEmail = process.env.ADMIN_SEED_EMAIL as string
 
 if (!supabaseUrl || !supabaseServiceKey || !adminEmail) {
   console.error("Missing required environment variables. Please check .env.local")
