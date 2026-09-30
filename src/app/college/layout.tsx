@@ -22,7 +22,7 @@ export default async function CollegeLayout({
     .eq('auth_user_id', user.id)
     .single()
 
-  const college = collegeEmail?.colleges
+  const college = collegeEmail?.colleges as any
 
   return (
     <div className="flex min-h-screen bg-[var(--color-background)]">

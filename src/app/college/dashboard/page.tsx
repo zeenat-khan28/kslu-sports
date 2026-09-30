@@ -29,7 +29,7 @@ export default async function CollegeDashboardPage() {
   return (
     <div className="space-y-8 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">Welcome, {collegeEmail?.colleges?.name}</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Welcome, {(collegeEmail?.colleges as any)?.name}</h1>
         <p className="text-[var(--color-muted)] mt-1">Manage your sports participation for the 2025-26 academic year.</p>
       </div>
 

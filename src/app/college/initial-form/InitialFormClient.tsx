@@ -18,7 +18,7 @@ export default function InitialFormClient({ sports, existingResponses, collegeId
   // Format state as Map of event_id -> is_participating (boolean)
   const initialMap = new Map<string, boolean>()
   existingResponses.forEach(r => {
-    initialMap.set(r.event_id, r.is_participating)
+    initialMap.set(r.sport_event_id, r.participating)
   })
 
   const [responses, setResponses] = useState(initialMap)
@@ -41,14 +41,14 @@ export default function InitialFormClient({ sports, existingResponses, collegeId
       // 1. Prepare UPSERT payload
       const payload = Array.from(responses.entries()).map(([eventId, isParticipating]) => ({
         college_id: collegeId,
-        event_id: eventId,
-        is_participating
+        sport_event_id: eventId,
+        participating: isParticipating
       }))
 
       if (payload.length > 0) {
         const { error: upsertError } = await supabase
           .from('initial_responses')
-          .upsert(payload, { onConflict: 'college_id,event_id' })
+          .upsert(payload, { onConflict: 'college_id,sport_event_id' })
         
         if (upsertError) throw upsertError
       }
