@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       })
 
       if (authError) {
-        if (authError.message.includes('already exists')) {
+        if (authError.message.includes('already') || authError.message.includes('registered') || (authError as any).code === 'email_exists') {
           const { data: users } = await supabaseAdmin.auth.admin.listUsers()
           const user = users.users.find(u => u.email === normalizedEmail)
           if (user) userId = user.id
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     // 3. Send the password reset / activation email using standard Supabase Auth
     // Because they now exist in auth.users, this will actually send an email!
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/set-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/set-password`,
     })
 
     if (resetError) {
