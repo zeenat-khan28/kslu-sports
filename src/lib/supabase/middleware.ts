@@ -31,17 +31,39 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protect college routes
-  if (request.nextUrl.pathname.startsWith('/college') && !user) {
+  if (!user) {
+    // Protect college routes
+    if (request.nextUrl.pathname.startsWith('/college')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    // Protect admin routes
+    if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/login'
+      return NextResponse.redirect(url)
+    }
+    
+    return supabaseResponse
+  }
+
+  // User is logged in. Let's check their role by looking at the admins table
+  const { data: adminRecord } = await supabase.from('admins').select('id').eq('auth_user_id', user.id).maybeSingle()
+  const isAdmin = !!adminRecord
+
+  // If Admin tries to access College portal, redirect to Admin dashboard
+  if (isAdmin && request.nextUrl.pathname.startsWith('/college')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/admin/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // Protect admin routes
-  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login') && !user) {
+  // If College tries to access Admin portal, redirect to College dashboard
+  if (!isAdmin && request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/admin/login'
+    url.pathname = '/college/dashboard'
     return NextResponse.redirect(url)
   }
 

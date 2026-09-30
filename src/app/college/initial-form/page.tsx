@@ -128,7 +128,7 @@ export default async function InitialFormPage() {
           sports={sportsWithEvents} 
           existingResponses={existingResponses || []} 
           collegeId={collegeId}
-          isLocked={!isOpen && !!existingSubmission}
+          isLocked={!!existingSubmission}
           hasSubmitted={!!existingSubmission}
         />
       </div>

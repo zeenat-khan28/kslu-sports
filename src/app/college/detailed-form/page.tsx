@@ -22,7 +22,9 @@ export default async function DetailedFormPage() {
     .from('initial_submissions')
     .select('*')
     .eq('college_id', collegeId)
-    .single()
+    .order('submitted_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!initialSubmission) {
     return (
